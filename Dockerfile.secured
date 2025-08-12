@@ -1,0 +1,30 @@
+# Use a specific Node.js LTS version (smaller and more secure image)
+FROM node:14-alpine
+
+# Create and set the working directory
+WORKDIR /usr/src/app
+
+# Copy only package files first to leverage Docker cache for dependencies
+COPY package*.json ./
+
+# Install dependencies (use npm ci for clean installs)
+RUN npm ci --only=production
+
+# Copy the rest of the application
+COPY . .
+
+# Change ownership of app files
+RUN chown -R node:node /usr/src/app
+
+# Switch to a non-root user
+USER node
+
+# Expose application port
+EXPOSE 3000
+
+# Add a health check (example: check HTTP status)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://localhost:3000 
+
+# Start the application
+CMD ["node", "server.js"]
