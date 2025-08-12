@@ -27,7 +27,7 @@ jobs:
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/node-app:latest .
 
       - name: Install Trivy
-        uses: aquasecurity/trivy-action@v0.14.0
+        uses: aquasecurity/trivy-action@v0.15.0
 
       - name: Scan Dockerfile for misconfigurations (Trivy config)
         run: |
@@ -35,7 +35,7 @@ jobs:
 
       - name: Scan Docker image for vulnerabilities
         id: trivy_scan
-        uses: aquasecurity/trivy-action@v0.14.0
+        uses: aquasecurity/trivy-action@v0.15.0
         with:
           image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/node-app:latest
           format: 'table'
