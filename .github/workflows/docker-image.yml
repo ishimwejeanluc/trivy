@@ -19,27 +19,24 @@ jobs:
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+          username: ${{ secrets.docker_hub_username }}
+          password: ${{ secrets.docker_access_token }}
 
       - name: Build Node app Docker image
         run: |
-          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/node-app:latest .
-
-      - name: Install Trivy
-        run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
-          sudo mv trivy /usr/local/bin/
+          docker build -t ${{ secrets.docker_hub_username }}/node-app:latest .
 
       - name: Scan Dockerfile for misconfigurations (Trivy config)
+        image: bitnami/trivy:latest
         run: |
-          trivy config Dockerfile --severity CRITICAL,HIGH --exit-code 1 --format table
+          trivy config /github/workspace/Dockerfile --severity CRITICAL,HIGH --exit-code 1 --format table
 
       - name: Scan Docker image for vulnerabilities
+        image: bitnami/trivy:latest
         run: |
-          trivy image --exit-code 1 --severity CRITICAL,HIGH ${{ secrets.DOCKERHUB_USERNAME }}/node-app:latest
+          trivy image --exit-code 1 --severity CRITICAL,HIGH ${{ secrets.docker_hub_username }}/node-app:latest
 
       - name: Push Docker image (only if scan passed)
         if: success()
         run: |
-          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/node-app:latest
+          docker push ${{ secrets.docker_hub_username }}/node-app:latest
