@@ -19,12 +19,12 @@ jobs:
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
       - name: Build Node app Docker image
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/node-app:latest .
+          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/node-app:latest .
 
       - name: Install Trivy
         run: |
@@ -42,4 +42,4 @@ jobs:
       - name: Push Docker image (only if scan passed)
         if: success()
         run: |
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/node-app:latest
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/node-app:latest
