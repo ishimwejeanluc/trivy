@@ -30,7 +30,7 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
             bitnami/trivy:latest \
-            config /workspace/Dockerfile --severity CRITICAL,HIGH --exit-code 1 --format table
+            config /workspace/Dockerfile.secured --severity CRITICAL,HIGH --exit-code 1 --format table
 
       - name: Build Node app Docker image
         run: |
