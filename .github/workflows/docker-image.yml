@@ -27,20 +27,17 @@ jobs:
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/node-app:latest .
 
       - name: Install Trivy
-        uses: aquasecurity/trivy-action@v0.15.0
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
+          sudo mv trivy /usr/local/bin/
 
       - name: Scan Dockerfile for misconfigurations (Trivy config)
         run: |
           trivy config Dockerfile --severity CRITICAL,HIGH --exit-code 1 --format table
 
       - name: Scan Docker image for vulnerabilities
-        id: trivy_scan
-        uses: aquasecurity/trivy-action@v0.15.0
-        with:
-          image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/node-app:latest
-          format: 'table'
-          exit-code: '1'
-          severity: 'CRITICAL,HIGH'
+        run: |
+          trivy image --exit-code 1 --severity CRITICAL,HIGH ${{ secrets.DOCKERHUB_USERNAME }}/node-app:latest
 
       - name: Push Docker image (only if scan passed)
         if: success()
