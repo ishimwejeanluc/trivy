@@ -23,7 +23,7 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
             bitnami/trivy:latest \
-            config /workspace/Dockerfile --exit-code 1
+            config /workspace/Dockerfile.secured --exit-code 1
 
       - name: Build Docker image
         run: |
