@@ -5,31 +5,49 @@ on:
     branches: [main]
 
 jobs:
-  build-scan-push:
+  build:
+    name: Build Docker image
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository code
         uses: actions/checkout@v4
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+      - name: Build Docker image using Dockerfile.secured
+        run: |
+          docker build -f Dockerfile.secured -t ${{ secrets.DOCKER_HUB_USERNAME }}/node-app:latest .
 
-      - name: Scan Dockerfile for misconfigurations
+  scan:
+    name: Scan Dockerfile.secured for misconfigurations
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Pull bitnami/trivy image
+        run: docker pull bitnami/trivy:latest
+
+      - name: Scan Dockerfile.secured with Trivy
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
             bitnami/trivy:latest \
             config /workspace/Dockerfile.secured --exit-code 1
 
-      - name: Build Docker image
-        run: |
-          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/node-app:latest .
+  push:
+    name: Push Docker image to Docker Hub
+    runs-on: ubuntu-latest
+    needs: scan
+
+    steps:
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
       - name: Push Docker image
-        if: success()
         run: |
           docker push ${{ secrets.DOCKER_HUB_USERNAME }}/node-app:latest
