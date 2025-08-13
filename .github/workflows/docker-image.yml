@@ -1,53 +1,64 @@
-name: Build, Scan, and Push
+name: Build, Scan, and Push Docker Image
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
-  build:
-    name: Build Docker image
+  build-and-scan:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository code
-        uses: actions/checkout@v4
+      # 1. Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Build Docker image using Dockerfile.secured
-        run: |
-          docker build -f Dockerfile.secured -t ${{ secrets.DOCKER_HUB_USERNAME }}/node-app:latest .
-
-  scan:
-    name: Scan Dockerfile.secured for misconfigurations
-    runs-on: ubuntu-latest
-    needs: build
-
-    steps:
-      - name: Checkout repository code
-        uses: actions/checkout@v4
-
-      - name: Pull bitnami/trivy image
-        run: docker pull bitnami/trivy:latest
-
-      - name: Scan Dockerfile.secured with Trivy
-        run: |
-          docker run --rm \
-            -v ${{ github.workspace }}:/workspace \
-            bitnami/trivy:latest \
-            config /workspace/Dockerfile.secured --exit-code 1
-
-  push:
-    name: Push Docker image to Docker Hub
-    runs-on: ubuntu-latest
-    needs: scan
-
-    steps:
+      # 2. Log in to Docker Hub
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-      - name: Push Docker image
+      # 3. Build Docker image
+      - name: Build Docker image
         run: |
-          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/node-app:latest
+          IMAGE_NAME=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/simple-node-app:latest
+          docker build -f Dockerfile.secured -t $IMAGE_NAME .
+          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+
+      # 4. Install Trivy
+      - name: Install Trivy
+        uses: aquasecurity/setup-trivy@v0.2.3
+        with:
+          version: v0.65.0
+          cache: true
+
+      # 5. Scan Docker image for CRITICAL vulnerabilities
+      - name: Scan Docker image
+        id: trivy
+        run: |
+          trivy image --severity CRITICAL --no-progress --format json -o trivy-report.json ${{ env.IMAGE_NAME }}
+          COUNT=$(jq '.Results[].Vulnerabilities | length' trivy-report.json | awk '{s+=$1} END {print s}')
+          echo "Vulnerabilities found: $COUNT"
+          echo "count=$COUNT" >> $GITHUB_OUTPUT
+
+      # 6. Report vulnerabilities
+      - name: Report vulnerabilities
+        run: |
+          COUNT="${{ steps.trivy.outputs.count }}"
+          echo "Found critical vulnerabilities: $COUNT"
+          if [ "$COUNT" -eq "0" ]; then
+            echo "No critical vulnerabilities found. You are good to deploy."
+          else
+            echo "Critical vulnerabilities found! Check trivy-report.json"
+            cat trivy-report.json
+          fi
+
+      # 7. Push Docker image only if no critical vulnerabilities
+      - name: Push Docker image
+        if: ${{ steps.trivy.outputs.count == '0' }}
+        run: |
+          echo "Pushing Docker image as no critical vulnerabilities were found."
+          docker push ${{ env.IMAGE_NAME }}
