@@ -19,7 +19,6 @@ The application is a basic Node.js HTTP server that serves "Hello, World!" on po
 - Copies all files before dependency installation (inefficient caching)
 - Runs as root user
 - No dependency verification
-- References incorrect entry point (`server.js` instead of `index.js`)
 
 ### Secured Dockerfile Improvements:
 - Uses Alpine-based Node.js image (smaller, more secure)
